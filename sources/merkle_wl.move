@@ -19,10 +19,6 @@ module wl::merkle_wl {
         is_whitelisted: bool
     }
 
-    struct Key has copy, store, drop { 
-        addr: address 
-    }
-
     public fun create(merkle_root: vector<u8>, ctx: &mut TxContext): Wl {
         Wl { 
             id: object::new(ctx),
