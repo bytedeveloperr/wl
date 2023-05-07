@@ -102,9 +102,9 @@ function getRandomWhitelistedAddress() {
 
 async function main() {
   const merkleWl = await executeMerkleWhitelist();
-  const tableWl = await executeGenericWhitelist("table_wl");
-  const vectorWl = await executeGenericWhitelist("vector_wl");
-  const dynamicWl = await executeGenericWhitelist("dynamic_wl");
+  const tableWl = await executeGenericWhitelistExtendBcs("table_wl");
+  const vectorWl = await executeGenericWhitelistExtendBcs("vector_wl");
+  const dynamicWl = await executeGenericWhitelistExtendBcs("dynamic_wl");
 
   console.log("\n=========== Transactions Stats ==========\n");
   console.table({
