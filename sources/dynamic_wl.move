@@ -16,7 +16,7 @@ module wl::dynamic_wl {
     }
 
     struct Key has copy, store, drop { 
-        addr: address 
+        addr: address
     }
 
     public fun create(addresses: vector<address>, ctx: &mut TxContext): Wl {

@@ -18,7 +18,7 @@ module wl::vector_wl {
     public fun create(addresses: vector<address>, ctx: &mut TxContext): Wl {
         Wl { 
             id: object::new(ctx), 
-            addresses 
+            addresses
         }
     }
     

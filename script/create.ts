@@ -8,25 +8,17 @@ import whitelist from "./whitelist.json";
 
 interface ExecuteInputData {
   module: string;
-  createArgs: any[];
-  checkArgs: any[];
+  args: any[];
 }
 
 async function executeScript(data: ExecuteInputData) {
   const txb = new TransactionBlock();
-  const createArgs = data.createArgs.map((arg) => txb.pure(arg));
+  const args = data.args.map((arg) => txb.pure(arg));
 
   const [wl] = txb.moveCall({
     typeArguments: [],
-    arguments: [...createArgs],
+    arguments: [...args],
     target: `${packageId}::${data.module}::create`,
-  });
-
-  const verifyArgs = data.checkArgs.map((arg) => txb.pure(arg));
-  txb.moveCall({
-    typeArguments: [],
-    arguments: [wl, ...verifyArgs],
-    target: `${packageId}::${data.module}::is_whitelisted`,
   });
 
   txb.moveCall({
@@ -38,7 +30,6 @@ async function executeScript(data: ExecuteInputData) {
   txb.setGasBudget(10000000000);
 
   const {
-    events,
     effects: { gasUsed },
   } = await signer.signAndExecuteTransactionBlock({
     transactionBlock: txb,
@@ -49,7 +40,7 @@ async function executeScript(data: ExecuteInputData) {
   const computationCost = Number(gasUsed.computationCost) / Number(MIST_PER_SUI);
 
   return {
-    isWhitelisted: <boolean>events[0].parsedJson.is_whitelisted,
+    isWhitelisted: undefined,
     storageCost,
     computationCost,
   };
@@ -60,51 +51,32 @@ async function executeMerkleWhitelist() {
   const tree = new MerkleTree(leaves, keccak256);
   const root = tree.getHexRoot();
 
-  const randomAddress = getRandomWhitelistedAddress();
-  const leaf = keccak256(randomAddress);
-  const positions = tree.getProof(leaf).map((p: { position: string }) => (p.position === "right" ? 1 : 0));
-
   return await executeScript({
     module: "merkle_wl",
-    createArgs: [Array.from(Buffer.from(root.slice(2), "hex"))],
-    checkArgs: [
-      tree.getHexProof(leaf).map((proof: string) => Array.from(Buffer.from(proof.slice(2), "hex"))),
-      positions,
-      randomAddress,
-    ],
+    args: [Array.from(Buffer.from(root.slice(2), "hex"))],
   });
 }
 
 async function executeGenericWhitelist(module: string) {
-  const randomAddress = getRandomWhitelistedAddress();
-
   return await executeScript({
     module,
-    createArgs: [whitelist],
-    checkArgs: [randomAddress],
+    args: [whitelist],
   });
 }
 
 // Trying to extend the bcs limit
 async function executeGenericWhitelistExtendBcs(module: string) {
-  const randomAddress = getRandomWhitelistedAddress();
-
   return await executeScript({
     module,
-    createArgs: [bcs.ser("vector<address>", bigWhitelist, { maxSize: 200 * 1024 }).toBytes()],
-    checkArgs: [randomAddress],
+    args: [bcs.ser("vector<address>", bigWhitelist, { maxSize: 200 * 1024 }).toBytes()],
   });
-}
-
-function getRandomWhitelistedAddress() {
-  return whitelist[Math.round(Math.random() * whitelist.length)];
 }
 
 async function main() {
   const merkleWl = await executeMerkleWhitelist();
-  const tableWl = await executeGenericWhitelist("table_wl");
-  const vectorWl = await executeGenericWhitelist("vector_wl");
-  const dynamicWl = await executeGenericWhitelist("dynamic_wl");
+  const tableWl = await executeGenericWhitelistExtendBcs("table_wl");
+  const vectorWl = await executeGenericWhitelistExtendBcs("vector_wl");
+  const dynamicWl = await executeGenericWhitelistExtendBcs("dynamic_wl");
 
   console.log("\n=========== Transactions Stats ==========\n");
   console.table({
